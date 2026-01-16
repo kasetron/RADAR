@@ -1,0 +1,20 @@
+# Cartelle temporanee Quartus
+greybox_tmp/
+incremental_db/
+work/
+db/
+.qsys_edit/
+simulation/
+output_files/
+
+# File di log
+*.log
+
+# File temporanei di sistema
+*.bak
+*.tmp
+*.svd
+*.sdf
+*.jou
+*.rpt
+*.qsf~
