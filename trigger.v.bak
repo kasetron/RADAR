@@ -1,0 +1,31 @@
+module trigger (
+    input clk,  // clock a 50 MHz
+    input rst_l,    // reset asincrono attivo basso
+    output reg trig // segnale di trigger
+);
+
+reg [11:0] count;   //contatore 12 bit per contare fino a 3500 (70 µs --> 10 µs per l'impulso di trigger + 60 µs prima del prossimo impulso), potrebbe esser aumentato a 4000 (80 µs)
+
+always @(posedge clk or negedge rst_l) begin
+    if (~rst_l) begin
+        count <= 0;
+        trig <= 0;
+    end 
+    
+    else begin
+        if (count == 3499) begin
+            count <= 0;
+        end 
+        else begin
+            count <= count + 1;
+        end
+
+        // impulso alto per i primi 500 cicli (10 µs)
+        if (count < 500)
+            trig <= 1;
+        else
+            trig <= 0;
+    end
+end
+
+endmodule

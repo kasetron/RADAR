@@ -1,0 +1,25 @@
+module pwm (en, clk, duty_cycle, pwm);
+input en, clk;   //en = enable per controllorare o meno il modulo, clk = clock a 2 KHz
+input [5:0] duty_cycle; //duty_cycle per pilotare il motore (2.5% - 97.5%)
+output reg pwm; //uscita impulsata
+
+    //contatore fino a 40 (0-39)
+    reg [5:0] count = 0;
+
+    always @(posedge clk) begin
+        if (en) begin
+
+            if(count == 0)
+                pwm <= 1; 
+            else if(count == duty_cycle)
+                pwm <= 0; 
+
+            count <= count + 1;
+
+            if (count > 39)
+                count <= 0; 
+
+        end
+    end
+    
+endmodule

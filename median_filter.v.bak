@@ -1,0 +1,58 @@
+module median_filter (
+    input             clk,
+    input             en_mf,       // enable registrazione uscita
+    input  [11:0]     in0,
+    input  [11:0]     in1,
+    input  [11:0]     in2,
+    input  [11:0]     in3,
+    input  [11:0]     in4,
+    output reg [11:0] out
+);
+
+    // registri interni per il sort combinatorio
+    reg [11:0] m0, m1, m2, m3, m4;
+    reg [11:0] tmp;
+
+    // rete di ordinamento combinatoria
+    always @* begin
+        // carico gli ingressi
+        m0 = in0;
+        m1 = in1;
+        m2 = in2;
+        m3 = in3;
+        m4 = in4;
+
+        // compare & swap: rete per 5 elementi (ordinamento parziale, basta per la mediana)
+
+        // step 1
+        if (m0 > m1) begin tmp = m0; m0 = m1; m1 = tmp; end
+        if (m3 > m4) begin tmp = m3; m3 = m4; m4 = tmp; end
+
+        // step 2
+        if (m2 > m4) begin tmp = m2; m2 = m4; m4 = tmp; end
+        if (m2 > m3) begin tmp = m2; m2 = m3; m3 = tmp; end
+
+        // step 3
+        if (m0 > m3) begin tmp = m0; m0 = m3; m3 = tmp; end
+        if (m0 > m2) begin tmp = m0; m0 = m2; m2 = tmp; end
+
+        // step 4
+        if (m1 > m4) begin tmp = m1; m1 = m4; m4 = tmp; end
+        if (m1 > m3) begin tmp = m1; m1 = m3; m3 = tmp; end
+
+        // step 5
+        if (m1 > m2) begin tmp = m1; m1 = m2; m2 = tmp; end
+        // dopo questa sequenza, m2 è la mediana
+    end
+
+    // registro di uscita sincronizzato
+    always @(posedge clk) begin
+        if (en_mf) begin
+            out <= m2;  // mediana dei 5 ingressi
+        end
+        else begin
+            out <= out; // tiene il valore precedente
+        end
+    end
+
+endmodule

@@ -1,0 +1,28 @@
+module SR (
+	input clk,   // 50MHz
+	input en_sr,
+	input [11:0] data_in,
+	output reg [11:0] data_0,
+	output reg [11:0] data_1,
+	output reg [11:0] data_2,
+	output reg [11:0] data_3,
+	output reg [11:0] data_out
+);
+
+always @ (posedge clk) begin
+	if en_sr begin
+		data_0   <= data_in;
+		data_1   <= data_0;
+		data_2   <= data_1;
+		data_3   <= data_2;
+		data_4   <= data_3;
+		data_out <= data_4;
+	end else begin
+		data_0   <= data_0;
+		data_1   <= data_1;
+		data_2   <= data_2;
+		data_3   <= data_3;
+		data_4   <= data_4;
+		data_out <= data_out;
+	end
+end

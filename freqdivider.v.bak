@@ -1,0 +1,20 @@
+module freqdivider (clk, CLOCK_50);
+input CLOCK_50;
+output reg clk;
+
+parameter F=3;
+
+// descrizione comportamentale
+
+// contatore
+reg [$clog2(F)-1:0] count = 0;
+
+always @(posedge CLOCK_50) begin
+	if (count == F - 1) begin
+		count <= 0;
+		clk   <= ~clk;  // cambia stato ogni F cicli
+	end else
+		count <= count + 1;
+end
+	
+endmodule

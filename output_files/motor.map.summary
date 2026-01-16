@@ -1,0 +1,16 @@
+Analysis & Synthesis Status : Successful - Sun Jan 11 17:28:41 2026
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Lite Edition
+Revision Name : motor
+Top-level Entity Name : radar
+Family : MAX 10
+Total logic elements : 1,102
+    Total combinational functions : 1,002
+    Dedicated logic registers : 381
+Total registers : 381
+Total pins : 48
+Total virtual pins : 0
+Total memory bits : 262,144
+Embedded Multiplier 9-bit elements : 7
+Total PLLs : 0
+UFM blocks : 0
+ADC blocks : 0

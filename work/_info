@@ -1,0 +1,90 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/aless/Documents/ALESSIO/Laurea_Magistrale/3_PSD/Codice/5_radar
+vfreqdivider
+!s110 1762445356
+!i10b 1
+!s100 Qa=5@hf7KGK97DZJ^TD7W1
+IVABa;Ul9Pf4]=7JS=_YcV1
+Z1 VDg1SIo80bB@j0V0VzS_@n1
+R0
+w1761302757
+8freqdivider.v
+Ffreqdivider.v
+L0 1
+Z2 OV;L;10.5b;63
+r1
+!s85 0
+31
+!s108 1762445356.000000
+!s107 freqdivider.v|
+!s90 -reportprogress|300|freqdivider.v|
+!i113 1
+Z3 tCvgOpt 0
+vmotor
+!s110 1762445379
+!i10b 1
+!s100 L:GcFoM@OA0EY=^l6NSSe3
+I9H?2zG<Q1D^1bDBWhRRAK2
+R1
+R0
+w1762444960
+8motor.v
+Fmotor.v
+L0 19
+R2
+r1
+!s85 0
+31
+!s108 1762445379.000000
+!s107 motor.v|
+!s90 -reportprogress|300|motor.v|
+!i113 1
+R3
+vmotor_tb
+!s110 1762445386
+!i10b 1
+!s100 E1ZH2]a>nCg8KPWOb:4CM0
+I]hkeg<5`jMFlTRPdVK2G:3
+R1
+R0
+w1762432188
+8motor_tb.v
+Fmotor_tb.v
+L0 1
+R2
+r1
+!s85 0
+31
+!s108 1762445386.000000
+!s107 motor_tb.v|
+!s90 -reportprogress|300|motor_tb.v|
+!i113 1
+R3
+vpwm
+!s110 1762445362
+!i10b 1
+!s100 oTz7lM]]JhOaThdF9j@SI2
+Ik7Gg5<3_N5[ohdKiVH<f=2
+R1
+R0
+w1762257330
+8pwm.v
+Fpwm.v
+L0 1
+R2
+r1
+!s85 0
+31
+!s108 1762445361.000000
+!s107 pwm.v|
+!s90 -reportprogress|300|pwm.v|
+!i113 1
+R3
