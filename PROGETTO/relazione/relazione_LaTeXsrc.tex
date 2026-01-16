@@ -1,0 +1,694 @@
+\documentclass[reprint,amsmath,amssymb,aps,rmp,twoside]{revtex4-2}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[italian]{babel}
+\usepackage{lipsum}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tocloft}
+\usepackage{enumitem}
+\usepackage{wrapfig}
+% QUalche traduzione...
+\makeatletter
+\def\tocname{Indice}
+\def\appendixname{Appendice}
+\def\acknowledgmentsname{Ringraziamenti}
+\def\andname{e}
+\def\Dated@name{Data: }
+\makeatother
+%Numerazioni più standard...
+\def\thesection{\arabic{section}}
+\def\thesubsection{\arabic{section}.\arabic{subsection}}
+\def\thesubsubsection{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+\definecolor{celadon}{rgb}{0.67, 0.88, 0.69}
+\definecolor{lightskyblue}{rgb}{0.61, 0.87, 1.0}
+\definecolor{bluebell}{rgb}{0.64, 0.64, 0.82}
+
+%Pacchetti Jacopo+Vincenzo (tolto doppioni)
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\graphicspath{ {/images/} }
+\usepackage{geometry}
+\geometry{a4paper, top=2cm, bottom=2cm, left=2.2cm, right=2.2cm}
+\usepackage{multirow}
+\usepackage{textcomp}
+\usepackage{float}
+\usepackage{indentfirst}
+\usepackage{siunitx} 
+\usepackage{ragged2e}
+\usepackage{mathtools}
+
+%pacchetti Ale+Leo (tolto doppioni)
+\usepackage{listings}   % inserimento codice
+\usepackage[T1]{fontenc}
+\usepackage{nicefrac}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{standalone}
+\usepackage[european,s traightvoltages, RPvoltages, americanresistor, americaninductors]{circuitikz}
+\tikzset{every picture/.style={line width=0.2mm}}
+\usetikzlibrary{calc}
+\ctikzset{bipoles/thickness=1.2, label distance=1mm, voltage shift = 1}
+\usepackage[RPvoltages]{circuitikz}
+\usetikzlibrary{decorations.pathmorphing,patterns}
+\setcitestyle{square}
+\tikzset{flipflop D/.style={flipflop,
+    flipflop def={t1=D, t6=Q, c3=1, t3={\texttt{CLK}}},
+    }}
+\usetikzlibrary{arrows.meta,automata,positioning}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+\begin{document}
+\nocite{achemso-ctrl}% Sets up achemso style
+\title{\textcolor{blue}{Progettazione di Sistemi Digitali -- AA 2025/26}\\ 
+Relazione di progetto -- \textit{Radar a Ultrasuoni}}
+\author{Gabriele Campo}
+\author{Alessio Fontana}
+\author{Matteo Martellini}
+\date{\today}
+
+\begin{abstract}
+{\bf Abstract.} Nel presente lavoro è stata progettata e realizzata una piattaforma digitale basata su FPGA per l’implementazione di un radar ad ultrasuoni, interamente descritta in linguaggio Verilog HDL e validata su scheda Terasic DE10-Lite. Si descriverà l'architettura e si concluderà con i risultati di sintesi e di fitting, l’analisi delle risorse impiegate e la verifica temporale del progetto, con particolare attenzione all'individuazione del cammino critico.
+\vspace{0.5 cm}
+\end{abstract}
+
+
+\maketitle
+
+\pagestyle{myheadings}
+\twocolumngrid
+\tableofcontents
+\twocolumngrid
+\markboth{PSD -- A.A. 2025/26}{T12 -- G.Campo, A.Fontana, M.Martellini}
+
+\section{Introduzione}
+
+Lo scopo del progetto affrontato consiste nella realizzazione, mediante piattaforma \textbf{FPGA}, di un radar ad ultrasuoni, ovvero di una versione semplificata del noto sistema di rilevamento di distanze basato su onde radio. Il progetto è stato interamente sviluppato in linguaggio \textit{HDL Verilog} utilizzando l'\textit{ide} \textbf{Quartus Prime}$^{\cite{quartus}}$, prodotto da \textbf{Altera}, ed è stato infine validato su una FPGA Altera della serie MAX 10 presente sulla scheda di sviluppo Terasic DE10-Lite$^{\cite{de10}}$$^{\cite{de10-manual}}$.
+
+Pur nella sua semplicità, l'implementazione proposta vuole garantire un alto grado di affidabilità, preservando interamente le funzionalità base di un comune radar. Per questo motivo, oltre ai blocchi di pilotaggio del servo motore, acquisizione e gestione dei dati provenienti dal sensore a ultrasuoni, il sistema integra un modulo per il filtraggio dei dati basato su filtro mediano. Ciò permette di migliorare la qualità delle informazioni riportate all'utente, attuando una reiezione degli \textit{outlier} dovuti alla presenza di disturbi acustici.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[trim={0 0 0 0},clip,width=1\linewidth]{figures/schema.png}
+    \caption{Schema riassuntivo del sistema e delle periferiche utilizzate. Connessioni con GPIO: {\color{red} Vcc (+3.3V/+5V)}, {\color{black} gnd}, {\color{orange} pwm}, {\color{cyan} Trig}, {\color{Green} Echo}}
+    \label{fig:schema}
+\end{figure}
+
+Per una migliore esperienza di utilizzo, inoltre, sono state aggiunte un'unità per la generazione dei segnali di controllo di un monitor \texttt{VGA}, sul quale visualizzare graficamente gli oggetti rilevati, e un'unità di gestione del display a sette segmenti presente sulla scheda, utile alla rappresentazione numerica delle distanze misurate. Uno schema riassuntivo del sistema complessivo può essere consultato in Fig.\ref{fig:schema}, dove sono evidenziate le principali interconnessioni tra la piattaforma FPGA e i componenti hardware utilizzati per la realizzazione del progetto.
+
+In questa relazione viene anzitutto illustrata l'architettura del sistema digitale progettato, costituita da diversi blocchi funzionali. A seguire sono riportate le descrizioni dettagliate di ciascun blocco e discusse le modalità di descrizione utilizzate, facendo sempre riferimento alle strategie di progetto adottate. Le varie fasi di sviluppo non sono state prive di criticità, affrontate mediante verifiche funzionali e testbench, che hanno garantito una piena comprensione dei limiti comportamentali del sistema ed il raggiungimento del risultato finale.
+
+
+\section{Metodologia di Progetto} \label{sec:metodo}
+
+
+Il sistema oggetto del presente lavoro è stato progettato secondo i criteri del \textbf{progetto digitale sincrono statico}. L’intera architettura è basata su un unico dominio di clock, comune a tutti i moduli che compongono il progetto, quello di sistema. Tale scelta consente di semplificare l’analisi temporale, ridurre le criticità legate alla sincronizzazione tra domini differenti e migliorare la robustezza complessiva del sistema.
+
+Il segnale di clock viene distribuito uniformemente a tutti i blocchi logici, evitando deliberatamente l’uso di clock \textit{derivati} o \textit{divisi}. La variazione della frequenza di operazione dei diversi sottosistemi non viene ottenuta tramite la generazione di nuovi segnali di clock, bensì attraverso l’impiego di segnali di abilitazione. In questo modo, ogni modulo può operare a una frequenza effettiva inferiore rispetto a quella del clock principale, pur rimanendo sincronizzato allo stesso riferimento temporale \textit{globale}. Questo approccio è preferibile in ambito FPGA, poiché evita problemi di skew, glitch e asincronia associati alla gestione di più clock.
+
+All’interno dei moduli è stata mantenuta una chiara distinzione tra la fase operativa e la fase di mantenimento dello stato. Quando il segnale di abilitazione - locale - è attivo, il registro o la macchina a stati aggiorna il proprio contenuto in base alla logica combinatoria associata; in caso contrario, lo stato viene mantenuto invariato. Tale comportamento è riconducibile al modello di flip-flop di tipo D con ingresso di abilitazione - \textbf{E flip-flop} -, primitiva estremamente utile nell'ambito del progetto sincrono statico.
+
+\begin{figure}[b!]
+\centering
+    \begin{circuitikz}[scale=0.8]
+        % Flip-flop
+        \node[flipflop D, fill=lightskyblue] (ff1) at (0,0) {FF$_1$};
+        \node[flipflop D, fill=lightskyblue] (ff2) at (3,0) {FF$_2$};
+
+
+        % Async input
+        \draw [-] (ff1.pin 1) -- ++(-0.3,0) node[left]{\small \texttt{async\_in}};
+
+        % FF connection
+        \draw [-] (ff1.pin 6) -- (ff2.pin 1);
+
+        % Sync output
+        \draw [-] (ff2.pin 6) -- ++(0.3,0) node[right]{\small \texttt{sync\_out}};
+
+        % Clock
+        \draw [-] (ff1.pin 3) -- ++(-0.05,0) -- ++(0,-1);
+        \draw [-] (ff2.pin 3) -- ++(-0.05,0) -- ++(0,-1) -- ++(-3,0) {[fill] circle [radius=0.03]} -- ++(-0.2,0) node[left]{\small \texttt{clk}};
+        \draw ;
+
+    \end{circuitikz}
+    \caption{Sincronizzatore ottimo a due flip-flop D per la sincronizzazione di segnali esterni asincroni al dominio di clock del sistema.}
+    \label{fig:synchronizer}
+\end{figure}
+
+
+I segnali globali \texttt{enable} e \texttt{reset\_l} - reset attivo basso - sono per loro natura esterni al sistema digitale, perciò potenzialmente asincroni rispetto al clock principale; infatti, provengono da periferiche controllate dall'utente umano, quali \textit{slide switch} e \textit{push button}. Poiché la propagazione diretta di segnali asincroni può introdurre fenomeni di metastabilità casuali e incontrollati in tutto il sistema, tali segnali non sono impiegati direttamente nella logica sequenziale. Al contrario, essi sono sincronizzati in un unico punto del sistema, mediante un sincronizzatore ottimo, e poi propagati. Il sincronizzatore ottimo adottato, schematizzato in Fig. \ref{fig:synchronizer}, è costituito da una catena di due flip-flop di tipo D connessi in cascata e pilotati dal clock a $50\,\si{M\hertz}$. Questa struttura riduce in modo significativo la probabilità che una transizione asincrona provochi metastabilità nei registri interni. In particolare, il primo flip-flop assorbe l’eventuale metastabilità, mentre il secondo fornisce un segnale decisamente più stabile e affidabile alla logica successiva. A valle di questi due sincronizzatori, i segnali \texttt{enable} e \texttt{reset\_l} assumono il ruolo di segnali globali \textbf{sincroni}, condivisi perciò da tutti i moduli del sistema.
+
+L'adozione di queste metodologie di progetto ha permesso di focalizzare l'attenzione sui requisiti di funzionalità del sistema, senza doversi preoccupare di criticità legate alla temporizzazione e alla sincronizzazione dei segnali.
+
+
+
+
+\section{Risorse hardware utilizzate}
+
+
+Il progetto fa uso in maniera eterogenea di risorse hardware integrate sulla scheda di sviluppo e di componenti esterni interfacciati ad essa tramite i pin \texttt{GPIO} o il connettore \texttt{VGA}.
+
+
+\subsection{Risorse on-board}
+
+Tra le risorse on-board rientrano, escludendo la piattaforma FPGA:
+
+\begin{itemize}
+    \item Display a sette segmenti: impiegato per la visualizzazione numerica (in millimetri) delle distanze misurate;
+    \item Slide-switch: impiegato per il controllo del segnale di \texttt{enable};
+    \item Push-button: impiegato per la generazione del segnale di \texttt{reset_l};
+    \item DAC a 4-bit: impiegato per eseguire la conversione dei segnali digitali a 4-bit \texttt{VGA\_R},\texttt{VGA\_G} e \texttt{VGA\_B} necessaria al trasferimento via \texttt{VGA}.
+\end{itemize}
+
+\subsection{Componenti esterni}
+
+Per quanto riguarda le periferiche esterne, sono stati utilizzati:
+
+\begin{itemize}
+    \item Sensore a ultrasuoni \texttt{HC-SR04}$^{\cite{HC-SR04}}$: utilizzato per la misura della distanza, tramite tempo di volo, dell'oggetto rilevato;
+    \item Servomotore \texttt{SG90}: impiegato per la rotazione del sensore e la scansione dell'area di interesse su un intervallo angolare compreso tra 0° e 180°;
+    \item Monitor \texttt{VGA}: utilizzato per la visualizzazione grafica del radar, con una griglia di riferimento per la stima delle distanze e la rappresentazione dell'oggetto rilevato tramite un indicatore di colore rosso.
+\end{itemize}
+
+\section{Descrizione Architetturale}
+
+Il sistema digitale progettato può essere rappresentato nella sua interezza dal diagramma a blocchi riportato in Fig.\ref{fig:bd}. Esso riceve in ingresso due segnali asincroni esterni provenienti da uno slide-switch e da un push-button, il segnale di echo generato dal sensore ad ultrasuoni e il segnale di clock. In uscita, invece, fornisce il segnale pwm di controllo posizionale del servo-motore, il segnale di trigger del sensore, i segnali di gestione del display a sette segmenti e i segnali utili al pilotaggio dell'interfaccia \texttt{VGA}.
+
+
+% diagramma a blocchi del sistema
+\begin{figure}[t!]
+    \centering
+    \begin{circuitikz}[node distance=2cm and 2.5cm, every node/.style={font=\scriptsize}, >=Stealth,scale=0.9, transform shape]
+        % Nodes
+        \node[rectangle,
+            draw = green!50!black,
+            minimum width = 6.3cm, 
+            minimum height = 5.1cm
+        ] (r) at (1,1.35) {};
+        \node[anchor=east,
+            text = green!50!black
+        ] at ([xshift=-2.1cm,yshift=-2.3cm]r.center) {\small \texttt{RADAR}};
+        \node[draw,
+            rectangle,
+            minimum height = 0.8cm,
+            minimum width = 1.4cm,
+            fill=Goldenrod
+        ] at (2,3.3) (motor) {Motor};
+        \node[draw,
+            rectangle,
+            fill=SpringGreen,
+            minimum height = 1.5cm,
+            minimum width = 1.4cm
+        ] at (2,1.9) (sensor) {Sensor};
+        \node[draw,
+            rectangle,
+            fill=SeaGreen, 
+            minimum height = 1.2cm,
+            minimum width = 1.4cm
+        ] at (2,-0.4) (vga) {VGA};
+        \node[draw,
+            rectangle,
+            fill=celadon, 
+            minimum height = 0.4cm,
+            minimum width = 0.8cm
+        ] at (-1.2,0) (so1) {\tiny opt.synch};
+        \node[draw,
+            rectangle,
+            fill=celadon, 
+            minimum height = 0.4cm,
+            minimum width = 0.8cm
+        ] at (-1.2,0.7) (so2) {\tiny opt.synch};
+
+        % Triangolo clk in alto a sinistra
+        \draw[fill=black] 
+        ([xshift=-2.93cm,yshift=1.65cm]r.center) --  % Punto in alto a sinistra
+        ++(-0.2cm,0.1cm) -- 
+        ++(0cm,-0.2cm) -- 
+        cycle;
+
+        % Clock connections
+        \draw[to reversed-] (-2.6,3) -- (1,3)
+            node[pos=0, left] {$clk$};
+        \draw[-to] (1,3) -- (1.3,3);
+        \draw[-to] (1,3) -- (1,-0.8) -- (1.3,-0.8);
+        \draw[-to] (1,1.25) -- (1.3,1.25);
+        \draw [fill] (1,1.25) circle [radius=0.03];
+        \draw [fill] (1,3) circle [radius=0.03];
+
+        % Enable e reset
+        \draw[to reversed-] (-2.6,0.7) -- (-1.8,0.7)
+            node[pos=0, left] {$rst\_l$};
+        \draw[to reversed-] (-2.6,0) -- (-1.8,0)
+            node[pos=0, left] {$en$};
+
+        \draw[-] (so2) -- (0.2,0.7);
+        \draw[-] (so1) -- (0,0);
+        \draw[-to] (0,0) -- (0,3.5) -- (1.3,3.5);
+        \draw[-to] (0,0) -- (0,-0.6) -- (1.3,-0.6);
+        \draw[-to] (0.2,0.7) -- (0.2,3.25) -- (1.3,3.25);
+        \draw[-to] (0.2,0.7) -- (0.2,-0.4) -- (1.3,-0.4);
+        \draw [fill] (0.2,0.7) circle [radius=0.03];
+        \draw [fill] (0,0) circle [radius=0.03];
+        \draw[-to] (0.2,1.5) -- (1.3,1.5);
+        \draw [fill] (0.2,1.5) circle [radius=0.03];
+
+        %i ngresso enable
+        \draw[to reversed-] (-2.6, 2.2) -- (1,2.2)
+            node[pos=0, left] {$Echo$};
+        \draw[-to] (1,2.2) -- (1.3,2.2);
+
+        % uscite sensore
+        \draw[very thick,-to] (2.7,1.5) -- (3.2,1.5) -- (3.2,0.6) --
+            node[pos=0.2, sloped] {/}
+            node[pos=0.24, below=0.1cm] {\tiny \texttt{12bit}}
+            node[pos=0.6, below=-0.03cm] {\tiny $distance$}
+            (0.6,0.6) -- (0.6,0) -- (1.3,0);
+        \draw[-to] (2.7,1.3) -- (3,1.3) -- (3,0.8) --
+            node[pos=0.5, above=-0.06cm] {\tiny $new\_data$}
+            (0.4,0.8) -- (0.4,-0.2) -- (1.3,-0.2);
+        \draw[very thick,-to] (2.7,1.7) -- (4.5,1.7)
+            node[pos=1, right] {\tiny HEX0}
+            node[midway, sloped] {/}
+            node[midway, below=0.1cm] {\tiny \texttt{7bit}};
+        \draw[very thick,-to] (2.7,1.9) -- (4.5,1.9)
+            node[pos=1, right] {\tiny HEX1};
+        \draw[very thick,-to] (2.7,2.1) -- (4.5,2.1)
+            node[pos=1, right] {\tiny HEX2};
+        \draw[very thick,-to] (2.7,2.3) -- (4.5,2.3)
+            node[pos=1, right] {\tiny HEX3};
+        \draw[-to] (2.7,2.5) -- (3,2.5) -- (3,2.8) -- (4.5,2.8)
+            node[pos=1, right] {$Trig\_out$};
+
+        % uscite motore
+        \draw[-to] (2.7,3.3) -- (4.5,3.3)
+            node[pos=1, right] {$pwm$};
+
+        % uscite vga
+        \draw[-to] (2.7,0) -- (3,0) -- (3,0.4) -- (4.5,0.4)
+            node[pos=1, right] {\tiny VGA\_HS};
+        \draw[-to] (2.7,-0.2) -- (3.2,-0.2) -- (3.2,0.2) -- (4.5,0.2)
+            node[pos=1, right] {\tiny VGA\_HS};
+        \draw[very thick,-to] (2.7,-0.5) -- (4.5,-0.5)
+            node[pos=1, right] {\tiny VGA\_R}
+            node[midway, sloped] {/}
+            node[midway, above=0.1cm] {\tiny \texttt{4bit}};
+        \draw[very thick,-to] (2.7,-0.7) -- (4.5,-0.7)
+            node[pos=1, right] {\tiny VGA\_G};
+        \draw[very thick,-to] (2.7,-0.9) -- (4.5,-0.9)
+            node[pos=1, right] {\tiny VGA\_B};
+
+    \end{circuitikz}
+    \caption{Diagramma a blocchi funzionali dell'architettura del sistema radar con porte di i/o.}
+    \label{fig:bd}
+\end{figure}
+
+Si possono distinguere tre blocchi funzionali principali, tralasciando la gestione dei segnali asincroni\footnote{Come detto, essi vengono resi sincroni da sincronizzatori ottimi prima di essere distribuiti a tutto l'apparato.}. Seguendo la strategia del partizionamento gerarchico, il sistema è stato progettato distinguendo descrizioni funzionali relative alle diverse aree operative.
+
+\subsection{Motore}
+
+Innanzitutto vengono descritte le caratteristiche del motore. Esso presenta tre fili di connessione - 5V, gnd e pwm - ed è in grado ruotare di $\pm 90^\circ$ rispetto ad una posizione di riferimento. L'angolo di destinazione è controllato dall'utente mediante la durata dell'impulso attivo alto a $50\,\si{\hertz}$ che il motore riceve sull'ingresso pwm. Vi è una relazione lineare tra la durata dell'impulso e la posizione del motore.
+
+Per riprodurre il movimento di un classico radar\footnote{Sweep continuo da $0^\circ$ a $180^\circ$ e ritorno, senza arresti e ripetuto ciclicamente}, abbiamo dovuto generare un segnale \textit{pwm} a $50\,\si{\hertz}$ con larghezza dipendente dal tempo. È stato utilizzato un contatore a 20-bit, il cui valore è incrementato ad ogni ciclo di clock a $50\,\si{M\hertz}$ e confrontato con il valore del segnale di medesima profondità \texttt{duty\_cycle}. Quest'ultimo segnale è generato all'interno del modulo \textit{dutycycle}, mentre il confronto avviene nel secondo e ultimo modulo dell'unità, \textit{pwm}. In base all'esito del confronto, il segnale di uscita \texttt{pwm} viene alzato, abbassato o mantenuto. Quando il contatore giunge al suo valore limite\footnote{Valore pari a $1000000$, scelto perché corrispondente a $20\,\si{m\s}$, periodo del segnale di uscita \texttt{pwm}} viene azzerato e in concomitanza si genera un impulso di durata $1\,\si{T_{clk}}$, denominato \texttt{tick\_50hz}. Questo segnale viene portato nel modulo \textit{dutycycle}, dove è utilizzato come abilitazione per l'aggiornamento del valore di \texttt{duty\_cycle}, che in questo modo non varia in maniera "continua", ma solo ogni $20\,\si{m\s}$, ovvero solo quando necessario.
+
+Nel modulo di generazione del segnale \texttt{duty\_cycle} sono definiti alcuni parametri locali, utili all'assegnazione del valore al segnale. In particolare sono definiti il valore minimo, il valore centrale, il valore massimo del segnale, il valore dell'incremento ed il numero di incrementi necessario a coprire completamente il settore angolare disponibile. I primi tre valori sono calcolati conoscendo la relazione tra larghezza dell'impulso e angolo, e ricordando che lavoriamo con un clock a $50\,\si{M\hertz}$, mentre \texttt{DELTA} e \texttt{STEPS} dipendono da una scelta progettuale: vogliamo che il radar scandisca $180^\circ$ in $5\,\si{\s}$. Siccome il segnale di controllo \texttt{pwm} ha una frequenza di $50\,\si{\hertz}$ sono necessari $5\,\si{\s} \cdot 50\,\si{\hertz} = 250$ passi. Questi parametri, insieme ai corrispondenti valori di durata dell'impulso e angolo, sono riportati in Tab. \ref{tab:servo}. Si ricorda che:
+
+\begin{center}
+    \texttt{DELTA} $\cdot$ \texttt{STEPS} = \texttt{MAX\_DUTY} - \texttt{MIN\_DUTY}
+\end{center}
+
+\begin{table}[t!]
+\begin{ruledtabular}
+    \begin{tabular}{cccc}
+         \texttt{localparam}&\texttt{Value}&\texttt{T[s]}&\texttt{Angolo}\\
+         \hline
+         \texttt{MIN\_DUTY}& 25000& $0.5\,\si{m\s}$& $-90^\circ$\\
+         \texttt{MID\_DUTY}& 75000& $1.5\,\si{m\s}$& $0^\circ$\\
+         \texttt{MAX\_DUTY}& 125000& $2.5\,\si{m\s}$& $+90^\circ$\\
+         \hline
+         \texttt{DELTA}& 400& $8\,\si{\micro\s}$& $0.72^\circ$\\
+    \end{tabular}
+    \caption{Parametri per il controllo del \textit{duty-cycle} e la conseguente gestione del servomotore.}
+    \label{tab:servo}
+\end{ruledtabular}
+\end{table}
+
+L'assegnazione ad ogni tick a $50\,\si{\hertz}$ avviene a valle di un sommatore che incrementa ad ogni step il valore in uscita. Una volta eseguiti 250 passi il contatore di appoggio viene azzerato e il segnale a 1-bit relativo al verso di rotazione viene invertito. Si passa ad un altro stato e per i 250 passi successivi, dunque, il valore di \texttt{duty\_cycle} verrà decrementato fino a tornare al minimo.
+
+\vspace{0.3cm}
+
+È importante rimarcare che, come illustrato nella Sez.\ref{sec:metodo}, quando l'enable o \texttt{tick\_50hz} sono bassi si entra in fase di \textit{mantenimento}: tutte le uscite e i segnali interni vengono conservati.
+
+
+Entrambi i moduli di cui è formato questo blocco sono dotati di reset - sincrono attivo basso - ed enable. Quando l'enable è basso, il motore si ferma; quando invece è il reset ad essere basso, il motore torna alla posizione di partenza, ovvero quella relativa a $-90^\circ$.
+
+
+
+
+
+\subsection{Sensore}
+
+Si prosegue con l'analisi del blocco che permette la rilevazione della distanza: il sensore HC-SR04. Quest'ultimo presenta 4 pin - Vcc, gnd, trigger ed echo - e proprio attraverso il segnale inviato da trigger e quello ricevuto da echo è possibile ricavare la distanza dell'oggetto, a partire dalla velocità del suono e dal tempo di volo. \\
+L'impulso di trigger ha una durata di \qty{10}{\micro\second} e il tempo che intercorre tra un impulso e l'altro è di \qty{100}{\milli\second}\footnote{Il gap di \qty{100}{\milli\second} è necessario per garantire la corretta separazione tra successivi segnali di echo. Si tiene conto del fatto che per una misura \textbf{non} valida il sensore risponde con un impulso di 36 ms}. Per generare l'impulso è stato utilizzato un contatore a 23-bit, il cui valore è incrementato ad ogni ciclo di clock a $50\,\si{M\hertz}$: da 0 a 500 - corrispondenti a \qty{10}{\micro\second} - \texttt{trig} viene mantenuto alto per poi esser tenuto basso fino al valore limite\footnote{Valore pari  a 5000000, numero corrispondente a 100 ms, con il clock a \qty{50}{\mega\hertz}.}. 
+Recepito l'impulso di trigger, il sensore risponde emettendo un treno di 8 impulsi acustici a \qty{40}{\kilo\hertz} dall'emettitore; questo rimane poi in ascolto, attendendo il ritorno, o meno\footnote{Dopo una durata di \qty{36}{\milli\second} viene interrotta la ricezione, indicando che non sono stati rilevati oggetti nel range di corretto utilizzo del sensore.}, di questi impulsi a ultrasuoni. La distanza è allora proporzionale alla durata del segnale di \texttt{echo}, ovvero all'intervallo temporale intercorso tra l'emissione e la ricezione degli ultrasuoni. Una rappresentazione temporale dei tre segnali è riportata in Fig. \ref{fig:echo}
+
+% echo
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/sensore.pdf}
+    \caption{Rappresentazione dei tempi caratteristici di funzionamento del sensore HC-SR04}
+    \label{fig:echo}
+\end{figure}
+
+% diagramma a palle
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/palle.pdf}
+    \caption{Diagramma a palle della FSM utilizzata nel blocco echo}
+    \label{fig:palle}
+\end{figure}
+
+
+
+\subsubsection{Echo}
+Il segnale di \texttt{echo} è gestito attraverso una macchina a stati, il cui diagramma a palle è  riportato in Fig. \ref{fig:palle}. Nello stato \textit{S0}, il sensore rimane in attesa che venga rilevata la presenza del segnale \texttt{start}, definito come il rilevatore del fronte in salita del segnale \texttt{echo}. Rilevato il segnale di inizio la macchina passa allo stato \textit{S1}, nel quale rimane fino all'arrivo del segnale \texttt{finish} o il raggiungimento del valore massimo \texttt{MAXCOUNT}\footnote{Il valore \texttt{MAXCOUNT} è pari a 441428, corrispondente a circa \qty{3}{\meter}, considerando la velocità del suono di \qty{340}{\meter\second^{-1}} e frequenza di clock di \qty{50}{\mega\hertz}.} da parte del contatore. Infine, nello stato \textit{S2} - nel quale la macchina entra raggiunto \texttt{MAXCOUNT} o una volta arrivato il segnale \texttt{finish} - viene memorizzato il conteggio e attivato un segnale di enable, usato poi dagli stadi successivi \textit{enabler} ed \textit{SR}.
+
+Attraverso il numero memorizzato è facile ricavare la distanza, in millimetri, dell'oggetto rilevato, sapendo che il conteggio è stato effettuato a $50\,\si{M\hertz}$, quindi secondo la formula:
+
+\begin{lstlisting}[language=Verilog]
+distance <= (dis_reg * 226) >> 16
+\end{lstlisting}
+
+Questa operazione implementa la classica formula per il calcolo della distanza\footnote{Il fattore $1/2$ serve per considerare che il tempo di volo comprende andata e ritorno del suono.}:
+
+\[
+\text{distanza} = \frac{\text{velocità del suono} \times t}{2}
+\]
+
+Possiamo notare come nella versione implementata in Verilog non sia stata effettuata una moltiplicazione per la costante $0.00345$ - o una divisione per 290 -  ma una moltiplicazione per un intero positivo seguita da uno shift logico di 16-bit, corrispondente ad una divisione per $2^{16}$. In questo modo vengono utilizzate meno risorse, riducendo anche l'impatto sul percorso critico.
+
+\subsubsection{Enabler e SR}
+
+Il segnale \texttt{en\_sr}, in uscita dal blocco \textit{echo}, pilota i blocchi \textit{enabler} ed \textit{SR}. Il blocco \textit{enabler} utilizza un contatore per generare un segnale di abilitazione verso il filtro mediano: l'uscita \texttt{en} si alza per un ciclo di clock ogni qualvolta sono stati conteggiati 5 impulsi validi di \texttt{en\_sr}, indicando che sono stati ricevuti 5 nuovi campioni di distanza misurata. Contestualmente, il blocco \textit{SR} (Shift Register) sfrutta \texttt{en\_sr} come abilitazione per lo scorrimento dei dati: ad ogni attivazione, il nuovo dato in ingresso viene memorizzato e quelli precedenti scalano di una posizione. Così facendo, si trovano in uscita gli ultimi 5 campioni acquisiti, pronti per essere elaborati dal filtro.
+
+\subsubsection{Filtro mediano}
+
+Il filtro mediano è adibito alla reiezione dei valori anomali - outliers\footnote{Gli outliers sono causati da vari fattori, come l'assorbimento del segnale ad ultrasuoni, che pertanto non verrà correttamente rilevato, o la presenza di interferenze o riflessioni.} - che si presentano durante la rilevazione della distanza, fornendo così in uscita un valore stabile e significativo.\\ 
+\`E stato implementato attraverso una macchina a stati - a 7 stati (S0...S6) - che permette di applicare un algortmo di sorting, attraverso confronti e scambi, sui dati in ingresso. Nello stato S0 vengono caricati i dati, ovvero le 5 distanze misurate, che verranno successivamente ordinate negli stati S1, S2, S3, S4 ed S5; l'ordinamento attuato fa sì che in terza posizione si trovi la mediana delle misure. Infine, nello stato S6 viene assegnata all'uscita del filtro  il valore del terzo registro di appoggio, contente la mediana.\\
+L'elaborazione richiede 7 cicli di clock, per questo motivo è stato utilizzato un \textit{ritardatore} per trasformare \texttt{en\_mf} in un segnale \texttt{new\_data} sincronizzato con il segnale \texttt{distance} in uscita dal blocco funzionale corrente. Questo concetto è particolarmente importante ai fini della rappresentazione su monitor \texttt{VGA} della distanza misurata, e verrà compreso appieno nel Par. \ref{sec:graf}.
+
+\subsubsection{Display a 7-segmenti}
+
+Per avere una lettura immediata della distanza sono stati utilizzati i display a 7-segmenti presenti sulla scheda. in particolare ne sono stati utilizzati 4, con la finalità di rappresentare, in base decimale, la distanza rilevata in millimetri e, nei casi di misura fuori range, accendere solo i segmenti orizzontali, come mostrato in Fig. \ref{fig:7seg}.\\
+La conversione dei numeri da binario - a 12 bit - a notazione \textit{BCD} - a 16 bit - è stata fatta sfruttando l'algoritmo Double Dabble. L’algoritmo riceve un dato binario a 12 bit e lo converte in formato BCD a 16 bit, così da rappresentare separatamente migliaia, centinaia, decine e unità. La conversione avviene esaminando il registro suddiviso in gruppi da 4 bit: quando il valore di un gruppo supera il valore 4, in decimale, viene applicata una correzione sommando 3. Questa operazione, è seguita da uno scorrimento a sinistra, in modo da assicurare la corretta propagazione dei riporti tra le cifre decimali.
+
+\vspace{0.3cm}
+
+La verifica della bontà della distanza misurata è affidata al blocco \textit{validator}. Quest'ultimo riceve in ingresso la misura - in binario - e la confronta con i parametri \texttt{MAXDIST} e \texttt{MINDIST}\footnote{\texttt{MAXDIST} e \texttt{MINDIST} sono qui espressi in decimale e valgono rispettivamente 3 m e 3 cm, rispettando quindi il range di corretto funzionamento del sensore.}, se questa risulta appartenente all'intervallo di validità \texttt{valid} viene messo a 1 altrimenti viene abbassato a 0. 
+
+Il segnale \texttt{valid} pilota il multiplexer del blocco \textit{mux\_valid}, il quale porta in uscita il valore della distanza misurata - espresso in standard \texttt{BCD} - se \texttt{valid} è alto.
+
+Il blocco \textit{mux\_valid} pilota i quattro decoder relativi ai display a 7-segmenti adibiti alla visualizzazione della misura effettuata e filtrata. Il pilotaggio avviene attraverso un vettore a 7-bit che indica quali LED del display accendere; in particolare il codice \texttt{7'b0111111}, corrispondente al solo trattino orizzontale centrale, è usato per indicare che la misura è fuori range, come mostrato in Fig. \ref{fig:7seg}. Il pilotaggio del singolo display è illustrato sul manuale della scheda$^{\cite{de10-manual}}$.
+
+Il segnale \texttt{valid} è usato anche per pilotare il blocco \textit{mux\_valid\_12bit}, che permette l'uscita - verso il modulo \texttt{VGA} - del segnale a 12-bit relativo alla distanza misurata, rappresentata in millimetri. Se alto, questo segnale permette l'uscita del dato; se basso, esso vincola l'uscita a zero\footnote{Interpretato poi dalla logica del blocco \texttt{VGA} come una misura non valida, perché fuori range.}.
+
+
+
+% 7segmenti
+\begin{figure}[t!]
+    \centering
+    \begin{circuitikz}[scale=1]
+        \ctikzset{seven seg/color on=red}
+        \ctikzset{seven seg/box sep/.initial=2pt}
+
+        % PANNELLO ALTO
+        \node at (-1,0) {\small (a)};
+        \draw (0,0) node[seven segment val=2 dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (1,0) node[seven segment val=0 dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (2,0) node[seven segment val=2 dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (3,0) node[seven segment val=6 dot off box off, fill=gray!40!white, xslant=0.1]{};
+
+        % PANNELLO BASSO
+        \node at (-1,-2) {\small (b)};
+        \draw (0,-2) node[seven segment val=- dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (1,-2) node[seven segment val=- dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (2,-2) node[seven segment val=- dot off box off, fill=gray!40!white, xslant=0.1]{};
+        \draw (3,-2) node[seven segment val=- dot off box off, fill=gray!40!white, xslant=0.1]{};
+
+    \end{circuitikz}
+    \caption{Rappresentazione del funzionamento dei display a 7-segmenti: (a) Misura valida, (b) Misura fuori range}
+    \label{fig:7seg}
+\end{figure}
+
+
+
+
+
+\subsection{VGA}
+
+Il sistema \texttt{VGA} realizzato è strutturato attorno a due moduli principali, affiancati da alcuni blocchi ausiliari necessari al corretto funzionamento dell’intero progetto. 
+
+Il modulo \textit{vga\_controller} si occupa della temporizzazione del segnale \texttt{VGA}, gestendo la scansione dei pixel dello schermo e la generazione dei segnali di sincronismo orizzontale e verticale - \texttt{hsync} e \texttt{vsync}. In altre parole, questo modulo definisce quando ciascun pixel deve essere disegnato.
+Il modulo \textit{vga\_graphics} si occupa della gestione dei segnali RGB, decidendo cosa visualizzare per ogni pixel visibile: esso stabilisce se mostrare lo sfondo oppure rappresentare il bersaglio individuato dal sistema radar, calcolandone la posizione a partire dai dati provenienti dai moduli esterni.
+
+\vspace{0.5cm}
+
+Accanto a questi, il sistema include un divisore di frequenza, due look-up table, contenenti i valori di seno e coseno relativi a un insieme di angoli prestabiliti, e una memoria ROM, nella quale viene caricato un file in formato .mif rappresentante lo sfondo.
+
+\subsubsection{Temporizzazione e scansione dello schermo}
+
+Il modulo \textit{vga\_controller} è responsabile della gestione della temporizzazione del protocollo \texttt{VGA}. È stata adottata la modalità \texttt{VGA} 640×480 a 60Hz, nella quale ogni frame è composto da 525 righe e ciascuna riga richiede 800 cicli di clock per essere disegnata. Di queste, solo 480 righe e 640 cicli corrispondono all’area effettivamente visibile sullo schermo\footnote{Il periodo del segnale \texttt{VGA} ha origine nell’angolo in alto a sinistra dell’area video; di conseguenza, i primi 640 degli 800 cicli orizzontali e le prime 480 delle 525 righe verticali sono dedicati all’area visibile.}, mentre le restanti porzioni sono dedicate ai segnali di sincronismo e alle pause di \textit{front porch} e \textit{back porch}, necessarie per il corretto funzionamento del monitor. Una schematizzazione del suddetto partizionamento è visibile in Fig. \ref{fig:porch}.
+
+\begin{figure}[b!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/porch.pdf}
+    \caption{Schema temporale del segnale \texttt{VGA} su display 640×480}
+    \label{fig:porch}
+\end{figure}
+
+La scansione dello schermo è realizzata tramite due contatori sincroni: un contatore orizzontale \texttt{h\_count}, che avanza a ogni ciclo di clock e scorre i pixel all’interno della riga, e un contatore verticale \texttt{v\_count}, che incrementa al termine di ciascuna riga, consentendo di passare alla riga successiva. Quando il contatore verticale raggiunge il valore massimo, entrambi i contatori vengono azzerati e inizia la scansione di un nuovo frame. A partire dai valori di questi contatori vengono generati i segnali di sincronismo \texttt{hsync} e \texttt{vsync}, che vengono portati a livello basso esclusivamente durante gli intervalli di sync pulse orizzontale e verticale, in conformità con lo standard VGA, che prevede segnali attivi bassi. L'attività di questi segnali è riportata in Fig. \ref{fig:sync}.
+
+Il modulo produce inoltre il segnale \texttt{video\_on}, che indica quando il pixel corrente si trova all’interno dell’area visibile dello schermo. Questo segnale è fondamentale poiché i segnali RGB devono essere considerati validi solo durante tale intervallo; quando \texttt{video\_on} è basso, il segnale video viene disattivato, realizzando la fase di blanking. Quando \texttt{video\_on} è alto, i valori di \texttt{h\_count} e \texttt{v\_count} rappresentano direttamente le coordinate X e Y del pixel corrente.
+
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{figures/synch.pdf}
+    \caption{Temportizzazione del protocollo \texttt{VGA}}
+    \label{fig:sync}
+\end{figure}
+
+
+\subsubsection{Gestione grafica e rappresentazione del radar}\label{sec:graf}
+
+Il modulo \textit{vga\_graphics} utilizza le informazioni fornite dal \textit{vga\_controller} per generare i segnali RGB da inviare al monitor. Il suo compito principale è quello di disegnare lo sfondo e rappresentare graficamente il bersaglio rilevato dal radar, simulando al contempo la scansione angolare del sensore.Per quanto riguarda lo sfondo, il modulo legge una memoria ROM\footnote{Lo sfondo viene caricato dalla ROM per ridurre il carico computazionale, evitando il ricalcolo tramite equazioni.} nella quale è memorizzata un’immagine monocromatica. L’accesso alla memoria avviene generando l’indirizzo corrispondente al pixel corrente mediante un’operazione di linearizzazione da due dimensioni a una dimensione. L’immagine è infatti memorizzata riga per riga: a ogni riga dell’immagine corrisponde una sequenza di celle di memoria pari alla larghezza dell’immagine. Il pixel in posizione (x, y) viene quindi individuato sommando al numero di pixel delle righe precedenti l’indice del pixel all’interno della riga corrente.
+
+\begin{lstlisting}[language=Verilog]
+rom_addr <= (v_count * IMG_W) + h_count
+\end{lstlisting}
+
+
+Poiché la dimensione dell’immagine di sfondo non coincide perfettamente con l’area visibile dello schermo, viene verificato che il pixel corrente rientri nell’intervallo valido; in caso contrario, viene utilizzato un indirizzo di default.
+
+\vspace{0.5cm}
+
+La rappresentazione del bersaglio avviene a partire dai dati forniti dal modulo del sensore. Il segnale \texttt{new\_data} indica la disponibilità di una nuova misura, prodotta dal filtro mediano con una frequenza di 2 Hz - ogni 0.5 secondi. Poiché questo segnale può rimanere alto per più cicli di clock, viene utilizzata una logica di rilevamento del fronte di salita, implementata tramite i registri \texttt{nd\_reg1} e \texttt{nd\_reg2}, per trasformarlo in un evento valido per un solo ciclo, evitando di avanzare di più di un settore per misura. La distanza del bersaglio è fornita in millimetri dal segnale \texttt{distance}. Per semplicità, è stata adottata la relazione 1 pixel = 1 centimetro, introducendo un segnale di appoggio \texttt{distx} per effettuare la conversione\footnote{Il segnale distx è stato definito signed per compatibilità con altri segnali; la larghezza effettiva scelta è di 12 bit, anche se ne sarebbero bastati 9.}. La divisione per 10 è stata sostituita da un’operazione equivalente ma meno onerosa in termini di risorse impiegate e ritardi generati. Successivamente, le coordinate polari del bersaglio vengono convertite in coordinate cartesiane utilizzando i valori di seno e coseno letti dalle LUT. I risultati vengono sommati alla posizione del centro delle circonferenze tracciate; per la coordinata verticale è necessario introdurre un segno negativo, poiché la coordinata y è incrementata dall'alto verso il basso. Lo shift aritmetico è utilizzato per compensare il fattore di scala introdotto nella rappresentazione intera dei valori trigonometrici.
+
+La scansione angolare del radar è simulata gestendo opportunamente l’indice delle LUT di seno e coseno. A tale scopo vengono utilizzati due segnali: \texttt{add\_lut}, che rappresenta il settore angolare corrente e coincide con l’indice delle LUT, e \texttt{lut\_ref}, che funge da riferimento per determinare il verso della scansione. L’indice avanza progressivamente da 0 a 9 e successivamente decresce da 9 a 0, simulando la rotazione del sensore da 0° a 180° e viceversa. In caso di reset, la posizione del bersaglio viene forzata al centro del sistema di riferimento polare e l’indice delle LUT viene riportato al valore iniziale.
+
+La parte finale del modulo \textit{vga\_graphics} stabilisce il colore da inviare al monitor per ciascun pixel. Quando \texttt{video\_on} è attivo, il modulo confronta la posizione del pixel corrente con la posizione del bersaglio calcolata in precedenza. Se il pixel cade all’interno di una finestra quadrata 8×8 centrata sul bersaglio, esso viene colorato per rendere il bersaglio facilmente visibile: il colore è rosso nel caso di bersaglio valido, mentre diventa blu quando il bersaglio è fuori dal range operativo del radar, situazione nella quale il quadrato viene visualizzato al centro delle circonferenze. Se il pixel corrente non appartiene all’area del bersaglio, viene visualizzata l'immagine di sfondo. In questo caso i canali rosso e blu sono sempre azzerati, mentre il canale verde dipende dal valore \texttt{green\_pix} letto dalla ROM; trattandosi di un singolo bit, esso determina se il pixel di sfondo debba essere visualizzato in verde o in nero, consentendo la rappresentazione di un'immagine monocromatica verde su sfondo nero. Quando \texttt{video\_on} è disattivo il pixel si trova in una zona di blanking, tutti i canali RGB vengono forzati a zero e la ROM viene letta presso un indirizzo di sicurezza, corrispondente a un pixel nero.
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/tb.png}
+    \caption{Forme d'onda e valori dei diversi segnali di input e output del modulo \textit{median\_filter}, simulati con la scrittura di un testbench. Si noti la discrepanza temporale tra il fronte dell'abilitazione \texttt{en\_mf} e l'aggiornamento dell'uscita.}
+    \label{fig:tb}
+\end{figure*}
+
+\subsubsection{Divisore di frequenza e generazione del clock di abilitazione }
+
+Il divisore di frequenza è stato introdotto per soddisfare il requisito di clock del modulo \textit{vga\_controller}. La scheda fornisce un clock principale a 50MHz, mentre lo standard \texttt{VGA} 640×480 a 60Hz richiede un clock di 25MHz per la corretta scansione dei pixel. Anziché generare un nuovo dominio di clock, è stata adottata una soluzione sincrona basata su un contatore che produce un segnale di abilitazione periodico. Il parametro F del modulo definisce ogni quanti cicli di clock deve comparire l’impulso di uscita; nel caso specifico, ponendo F = 2, il segnale di abilitazione \texttt{enclk\_pix} viene attivato una volta ogni due cicli del clock a 50 MHz, producendo un segnale a 25MHz.
+
+\subsubsection{Look-up table}
+
+Le look-up table sono utilizzate per memorizzare i valori di seno e coseno relativi a un insieme discreto di angoli, necessari per la conversione delle coordinate polari del bersaglio in coordinate cartesiane. Il servo motore è stato pilotato in modo tale da compiere una rotazione di 180° in 5 secondi; poiché il filtro mediano produce un’uscita ogni 0,5 secondi, durante una rotazione completa si ottengono 10 campioni. Per questo motivo, l’intervallo angolare di 180° è stato suddiviso in 10 settori, e per ciascun settore sono stati pre-calcolati i corrispondenti valori di seno e coseno. Il radar non individua esattamente la posizione del bersaglio ma riconosce in quale settore angolare si trova e traccia la distanza per degli angoli predefiniti (9°, 27°, 45°…) commettendo un errore angolare massimo di 9°. Dal momento che Verilog non supporta la rappresentazione in virgola mobile, tali valori sono stati codificati in formato fixed-point signed su 8 bit complessivi, di cui uno dedicato al segno. I valori reali sono stati moltiplicati per una potenza di due, arrotondati all’intero più vicino e successivamente convertiti in binario. Questa scelta introduce un errore massimo limitato, pari a circa lo 0,54\%\footnote{L’errore è riferito al valore trigonometrico e, attraverso le operazioni successive, può propagarsi e aumentare; tuttavia, l'unico scopo di queste operazioni è una visualizzazione grafica dal carattere assolutamente qualitativo.} rispetto al valore iniziale. Le LUT sono state implementate come registri e non tramite le memorie dedicate della scheda per semplicità, in
+quanto lo spazio richiesto è estremamente ridotto.
+
+
+
+\subsubsection{Memoria ROM}
+
+La rappresentazione dello sfondo è affidata a una memoria ROM, implementata sfruttando i blocchi di memoria M9K interni alla FPGA MAX 10. L’uso di una ROM consente di evitare il calcolo dinamico dello sfondo tramite equazioni, riducendo in modo significativo la complessità computazionale del modulo grafico. La memoria è stata istanziata tramite l'IP Catalog di Quartus, selezionando il componente “ROM: 1-PORT” e configurandolo attraverso il wizard. Il contenuto della ROM è inizializzato mediante un file .mif, che contiene la codifica binaria dell'immagine di sfondo. L'immagine originale è stata convertita in una sequenza di zeri e uni in un documento testuale, dove ciascun bit indica se il corrispondente pixel deve essere visualizzato oppure no, con un semplice codice in \texttt{python}. La conversione al formato .mif è stata eseguita usando un secondo programma. Per memorizzare l’intera immagine sono stati utilizzati 32 blocchi M9K\footnote{Le word da memorizzare sono 254.562 (pari a 638×399); pertanto, è stata scelta una profondità di 262.144, corrispondente alla potenza di due più vicina.}, affiancati da un numero limitato di LUT e registri per la gestione della logica di indirizzamento e dei dati. Durante il funzionamento, quando il segnale \texttt{video\_on} è attivo, il pixel corrente viene sempre considerato valido; se i segnali RGB sono tutti a zero, il colore visualizzato è nero, il che può dare l'impressione di un pixel spento, pur trattandosi in realtà di un
+pixel correttamente visualizzato.
+
+\vspace{0.5cm}
+
+\section{Verifica funzionale e testbench}
+
+La presenza di componenti esterni come il sensore ad ultrasuoni e il servomotore, che operano con input a bassa frequenza - 50 Hz - e in domini temporali non direttamente simulabili, ha reso irrilevante la realizzazione di testbench completi per l’intero sistema, la cui funzionalità è stata verificata direttamente sul prototipo. Di conseguenza, non sono stati eseguiti testbench significativi per l’architettura complessiva.
+
+L’unico testbench rilevante riportato è quello che verifica il comportamento del filtro mediano. Questo ha permesso di verificare il corretto funzionamento della macchina a stati implementata per l’ordinamento dei campioni e di quantificare il numero di cicli di clock necessari all’elaborazione della mediana. Questo approccio ha fornito informazioni utili alla sincronizzazione del segnale \texttt{new\_data} rispetto al blocco di acquisizione dei dati. La verifica è stata eseguita con il software Modelsim-Altera, ed il risultato è riportato in Fig. \ref{fig:tb}.
+
+
+
+\section{Sintesi, fitting e analisi temporale}
+
+Conclusa la fase di descrizione e progettazione dell’architettura del sistema, il progetto è stato sottoposto alle fasi di analisi, sintesi e fitting, finalizzate alla traduzione della descrizione \texttt{HDL} in una rete di porte logiche e registri e all'implementazione sulla piattaforma FPGA. Infine, è stata condotta un’accurata analisi temporale, volta a verificare il rispetto dei vincoli di timing e a individuare l’eventuale presenza di cammini critici, al fine di garantire il corretto funzionamento del sistema alla frequenza di clock prevista.
+
+\subsection{Sintesi}
+
+Durante questa fase l'architettura viene tradotta in una rappresentazione a livello \textbf{RTL}\footnote{Register Transfer Level.} dal sintetizzatore. Il processo di sintesi produce una serie articolata di report informativi, che descrivono nel dettaglio la struttura logica ottenuta e le risorse hardware impiegate. Di questi, per brevità, riportiamo esclusivamente il \textbf{report summary} di sintesi, che fornisce una visione d'insieme delle risorse utilizzate durante l'elaborazione.
+
+\begin{table}[H]
+\begin{ruledtabular}
+    \begin{tabular}{l|c}
+         Total logic elements&1102\\
+         Total registers&381\\
+         Total memory bits&262144\\
+         Embedded multiplier 9-bit elements\,\,&7\\
+         I/O pins&48\\
+         Maximum fan-out node&\small \texttt{MAX10\_CLK1\_50}\\
+         Maximum fan-out&413\\
+         Average fan-out&3.29\\
+    \end{tabular}
+    \caption{Analysis \& Synthesis Summary}
+    \label{tab:sintesi}
+\end{ruledtabular}
+\end{table}
+
+\subsection{Fitting}
+
+Successivamente è stata eseguita la fase di fitting, comprendente le operazioni di \textit{placement} e \textit{routing}, necessarie all’allocazione delle risorse logiche e delle interconnessioni fisiche sul dispositivo target. Analogamente a quanto fatto per la sintesi, per motivi di brevità viene riportato esclusivamente il \textbf{report summary} del fitting, che consente di valutare in modo sintetico l’esito del processo di implementazione.
+
+\begin{table}[H]
+\begin{ruledtabular}
+    \begin{tabular}{l|c}
+         Total logic elements&1072 (2\%)\\
+         Total registers&338\\
+         Total memory bits&262144 (16\%)\\
+         Embedded multiplier 9-bit elements\,\,&7 (2\%)\\
+         I/O pins&48 (13\%)\\
+    \end{tabular}
+    \caption{Fitter Summary}
+    \label{tab:sintesi}
+\end{ruledtabular}
+\end{table}
+
+\subsection{Analisi temporale}
+
+L'analisi temporale è stata effettuata per verificare che il progetto soddisfi i vincoli di timing imposti dal segnale di clock e che tutti i percorsi sincroni rispettino i requisiti di setup e hold, garantendo il corretto funzionamento del sistema.\\
+È stato utilizzato un unico dominio di clock per tutto il sistema che è stato definito nel file .sdc implementando le seguenti costrains\\
+
+\begin{lstlisting}[language=Verilog, caption=File .scd relativo ai constraints di clock]
+create_clock -name MAX10_CLK1_50 -period 20.000 -waveform {10 20} [get_ports {MAX10_CLK1_50}]
+
+derive_clock_uncertainty
+\end{lstlisting}
+
+Il clock imposto - denominato \texttt{MAX10\_CLK1\_50} - ha allora un periodo di 20 ns.
+
+A partire da questo clock, il tool di sintesi e timing analysis ha valutato i percorsi registro-logica–registro, individuando i peggiori ritardi associati alla logica combinatoria e alle interconnessioni interne al dispositivo, riportati in Tab. \ref{tab:timing}.
+
+\begin{table}[H]
+\begin{ruledtabular}
+    \begin{tabular}{l|c}
+         Worst-case Slack (setup)\,\,&8.306 ns\\
+         Worst-case Slack (hold)&0.148 ns\\
+         Worst-case F$_{max}$&85.51 MHz\\
+    \end{tabular}
+    \caption{Timing Analyzer Summary}
+    \label{tab:timing}
+\end{ruledtabular}
+\end{table}
+
+Per ciascun percorso analizzato, il Launch Clock rappresenta il fronte di clock che raggiunge il registro di partenza, mentre il Latch Clock identifica il fronte di clock applicato al registro di arrivo. Inoltre, il Data Arrival corrisponde al tempo complessivo necessario affinché il dato, una volta lanciato dal registro sorgente, attraversi la logica e raggiunga il registro di destinazione. Il Data Required indica invece l’istante entro il quale il dato deve essere stabile per consentire un campionamento corretto, tenendo conto dei vincoli di setup del registro di arrivo.
+
+La differenza tra il tempo richiesto e il tempo di arrivo del dato definisce lo Slack, parametro necessario per valutare il rispetto dei vincoli di timing. 
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/Slack positivo.png}
+    \caption{Diagramma di timing del percorso critico: rappresentazione dei segnali di Launch Clock e Latch Clock, del tempo di arrivo del dato (Data Arrival) e del tempo durante il quale i dati devono risultare stabili (Data Required). Il valore di slack positivo pari a 8.306 ns evidenzia il rispetto dei vincoli di timing e la presenza di un adeguato margine di sicurezza per il corretto campionamento dei dati.}
+    \label{fig:slack}
+\end{figure*}
+
+
+In Fig. \ref{fig:slack} è riportato il risultato dell'analisi effettuata; si osserva come il percorso critico presenti uno slack positivo pari a 8.306 ns. Questo indica che il dato arriva al registro di destinazione con un margine di sicurezza significativo rispetto all’istante in cui è richiesto.
+
+
+Il timing analyzer fornisce anche la frequenza massima di clock, la quale risulta essere 85.51 MHz, oltre al percorso critico, a cui è associato lo slack minimo. Questo risulta partire dalla porta del filtro mediano {\color{blue}\texttt{sensor:inst6|median\_filter:inst7|out[5]}} e arrivare alla porta del blocco di gestione grafica della \texttt{VGA} {\color{blue}\texttt{vga:inst7|vga\_graphics:inst10|distx[8]}}, ed è il cammino che limita superiormente la frequenza massima di clock.
+
+
+\vspace{0.5cm}  
+
+\section{Analisi dei warning}
+
+\begin{itemize}
+
+\item \textit{Warning del codice bcd2bin}: Risolto e commentato nel rispettivo modulo\footnote{Il codice utilizzato proviene da una fonte esterna, vedi "Riferimenti bibliografici"$^{\cite{GitHub}}$}.
+\item \textit{Warning (10030): Net "lut.waddr\_a" at cos\_lut.v(7) has no driver or initial value, using a default initial value '0'}:
+Compaiono tre di questi warning per la LUT contenete i valore del coseno (ed altri tre in maniera analoga per la LUT del seno), derivano dal fatto che Quartus non riconosce il template e mappa i valori sui singoli registri. Il problema può essere eliminato instanziando delle ROM, nello stesso modo in cui è stato fatto per il modulo \textit{rom}.
+\item \textit{Warning (10230): Verilog HDL assignment warning at echo.v(50): truncated value with size 32 to match size of target (20)}:
+Numerosi warning di questo tipo sono legati al fatto che i numeri sono stati scritti senza specificare esplicitamente la dimensione e il formato (ad esempio, 1 invece di 1'b1), determinando troncamenti automatici per adattarsi alla larghezza del segnale di destinazione.
+\item \textit{Warning (10905): Generated the EDA functional simulation netlist because it is the only supported netlist type for this device}:
+Questo warning è puramente informativo. Quartus genera una “netlist funzionale” per consentire la simulazione con strumenti EDA come ModelSim.
+\item \textit{Warning (15714): Some pins have incomplete I/O assignments. Refer to the I/O Assignment Warnings report for details}:
+Questo warning è informativo e deriva dal fatto che non sono state definite constraint complete per le porte di I/O (direzione, pilotaggio e posizione fisica sulla scheda). Di conseguenza, nella finestra “Compilation Report”, la sezione “Timing Analyzer – Unconstrained Paths – Summary” risulta evidenziata in rosso.
+\item \textit{Warning (18236): Number of processors has not been specified which may cause overloading on shared machines}:  
+Questo warning riguarda esclusivamente le prestazioni di compilazione e non il progetto hardware. Non essendo stato specificato il numero di core della CPU da utilizzare, Quartus sceglie automaticamente le risorse disponibili.
+\item \textit{Warning (292013): Feature LogicLock is only available with a valid subscription license. You can purchase a software subscription to gain full access to this feature}:
+Utilizzando una licenza gratuita per studenti, non è possibile sfruttare la funzionalità LogicLock, che consente di assegnare parti specifiche del design a regioni fisiche della FPGA per controllare implementazione e timing. Il warning può essere ignorato.
+
+\end{itemize}
+
+\begin{figure*}[htp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/radar.jpeg}
+    \caption{Prototipo.}
+    \label{fig:prot}
+\end{figure*}
+
+
+\section{Commenti e conclusioni generali sul progetto}
+
+
+L’adozione di metodologie di progetto sincrone, basate su un unico dominio di clock e sull’uso sistematico di segnali di abilitazione, ha consentito di ottenere un’architettura ordinata, facilmente verificabile e robusta dal punto di vista temporale. Particolare attenzione è stata posta alla gestione dei segnali asincroni esterni, sincronizzati mediante sincronizzatori ottimi, al fine di ridurre il rischio di metastabilità e garantire un comportamento deterministico del sistema.
+
+Le fasi di sintesi, fitting e analisi temporale hanno confermato la corretta mappatura dell’architettura sul dispositivo target, evidenziando un utilizzo contenuto delle risorse logiche e il rispetto dei vincoli di timing imposti. L’analisi dei warning generati dagli strumenti di sviluppo non ha inoltre messo in luce criticità tali da compromettere il funzionamento del sistema.
+
+Nonostante il corretto funzionamento del sistema, sono state evidenziate possibili migliorie implementabili. Senza un feedback dalla VGA al motore si genera uno sfasamento nel tempo, poiché il motore impiega una frazione di secondo per fermarsi e invertire il verso di rotazione a 0° e 180°, mentre la VGA riparte immediatamente, causando una rapida perdita dell’allineamento angolare. Si potrebbe inoltre ridurre la dimensione delle LUT per seno e coseno, memorizzando i valori di un solo quadrante e sfruttando le proprietà di simmetria. La gestione del segnale \texttt{Trig} potrebbe essere modificata\footnote{Si potrebbe ridurre il tempo di attesa tra un impulso ed il successivo, nei limiti del consentito.} in modo da ottenere un maggior numero di misure valide a parità di velocità di rotazione. Infine, il filtro mediano potrebbe essere ottimizzato con il fine di diminuire il tempo di computazione\footnote{Iniziando i confronti tra i dati che progressivamente riempiono il registro a scorrimento \textit{Serial-In-Parallel-Out}}.
+
+\vspace{1cm}
+
+
+
+\bibliographystyle{plainurl}
+\bibliography{mybib}
+
+
+
+\end{document}
+
