@@ -31,12 +31,6 @@ This project is intended mainly for **educational and experimental purposes**, f
 
 ---
 
-## License
-
-This project is released under the **MIT License**.
-
----
-
 ## Author
 
 **kasetron**  
