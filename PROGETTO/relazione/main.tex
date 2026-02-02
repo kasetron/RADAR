@@ -181,7 +181,7 @@ Tra le risorse on-board rientrano, escludendo la piattaforma FPGA:
 \begin{itemize}
     \item Display a sette segmenti: impiegato per la visualizzazione numerica (in millimetri) delle distanze misurate;
     \item Slide-switch: impiegato per il controllo del segnale di \texttt{enable};
-    \item Push-button: impiegato per la generazione del segnale di \texttt{reset\_l};
+    \item Push-button: impiegato per la generazione del segnale di \texttt{reset_l};
     \item DAC a 4-bit: impiegato per eseguire la conversione dei segnali digitali a 4-bit \texttt{VGA\_R},\texttt{VGA\_G} e \texttt{VGA\_B} necessaria al trasferimento via \texttt{VGA}.
 \end{itemize}
 
@@ -418,7 +418,7 @@ Il segnale \texttt{en\_sr}, in uscita dal blocco \textit{echo}, pilota i blocchi
 \subsubsection{Filtro mediano}
 
 Il filtro mediano è adibito alla reiezione dei valori anomali - outliers\footnote{Gli outliers sono causati da vari fattori, come l'assorbimento del segnale ad ultrasuoni, che pertanto non verrà correttamente rilevato, o la presenza di interferenze o riflessioni.} - che si presentano durante la rilevazione della distanza, fornendo così in uscita un valore stabile e significativo.\\ 
-\`E stato implementato attraverso una macchina a stati - a 7 stati (S0...S6) - che permette di applicare un algortmo di sorting, attraverso confronti e scambi, sui dati in ingresso. Nello stato S0 vengono caricati i dati, ovvero le 5 distanze misurate, che verranno successivamente ordinate negli stati S1, S2, S3, S4 ed S5; l'ordinamento attuato fa sì che in terza posizione si trovi la mediana delle misure. Infine, nello stato S6 viene assegnata all'uscita del filtro  il valore del terzo registro di appoggio, contente la mediana.\\
+\`E stato implementato attraverso una macchina a stati - a 7 stati (S0...S6) - che permette di applicare un algoritmo di sorting, attraverso confronti e scambi, sui dati in ingresso. Nello stato S0 vengono caricati i dati, ovvero le 5 distanze misurate, che verranno successivamente ordinate negli stati S1, S2, S3, S4 ed S5; l'ordinamento attuato fa sì che in terza posizione si trovi la mediana delle misure. Infine, nello stato S6 viene assegnata all'uscita del filtro  il valore del terzo registro di appoggio, contente la mediana.\\
 L'elaborazione richiede 7 cicli di clock, per questo motivo è stato utilizzato un \textit{ritardatore} per trasformare \texttt{en\_mf} in un segnale \texttt{new\_data} sincronizzato con il segnale \texttt{distance} in uscita dal blocco funzionale corrente. Questo concetto è particolarmente importante ai fini della rappresentazione su monitor \texttt{VGA} della distanza misurata, e verrà compreso appieno nel Par. \ref{sec:graf}.
 
 \subsubsection{Display a 7-segmenti}
@@ -497,7 +497,7 @@ Il modulo produce inoltre il segnale \texttt{video\_on}, che indica quando il pi
 \begin{figure}[t!]
     \centering
     \includegraphics[width=\linewidth]{figures/synch.pdf}
-    \caption{Temportizzazione del protocollo \texttt{VGA}}
+    \caption{Temporizzazione del protocollo \texttt{VGA}}
     \label{fig:sync}
 \end{figure}
 
